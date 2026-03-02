@@ -4,10 +4,11 @@ A simple .drw generator by __hubblle
 """
 
 
-import numpy as np
 from handwriting_synthesis import Hand
 import os
 import open_svg
+import subprocess
+import platform
 
 
 def clear():
@@ -26,6 +27,7 @@ LOGO = r"""
 """
 
 CHAR_BREAK=30
+CHAR_BREAK_D = CHAR_BREAK
 
 menu=[
     f"""
@@ -45,13 +47,21 @@ OPTIONS={
     "styles":[1] 
 }
 
+HELP={
+    "BIASES":"The biases is the Legibility between 0 and 1, one is the best, more robotic, and 0 is the worst, more chaotic.",
+    "STYLES":"There are several styles available, please refer to https://www.calligrapher.ai/ to test them all.",
+    "CHAR_BREAK":"Imported text is automatically cut into several lines, this rules how much characters are kept on one line."
+}
+
+
+
 #### Functions
 
 def line(n=1):
     for _ in range(n):print("\n")
 
 
-def generate_svg(lines:list, fname:str="output", options:dict=OPTIONS, ):
+def generate_svg(lines:list, fname:str="output", options:dict=OPTIONS ):
     """This function use the handwriting_synthesis to generate 
 
     Args:
@@ -106,9 +116,116 @@ def parse_txt(path:str)->list:
             
     return lines
             
+
+def choose_new(name:str, min:int, max:int, integer:bool)->int:
+    clear()
+    print("Please, enter the new value for "+name+" below")
+    print("   > The value must be"+(" an integer " if integer else " ")+f"between {min} and {max}" )
+    print("   > You can enter 'R' to reset")
+    line()
+    choice = input(">>> ")
     
+    if choice.capitalize() == 'R':
+        return 'R'
     
-def gui_1()->tuple:
+    try:
+        if integer:choice = int(choice)
+        else: choice = float(choice)
+        
+    except ValueError:
+        return choose_new(name, min, max, integer)
+    
+    if not min<=choice<=max:
+        return choose_new(name, min, max, integer)
+    
+    return choice
+    
+
+
+
+def gui_2():
+    
+    options = OPTIONS.copy()
+    global CHAR_BREAK
+    
+    while True:
+        
+        
+        clear()
+        print(menu[1])
+        line(2)
+        
+        print("Here are the default options, please select the one you want to modify")
+        print("####################################")
+        print(f"  [1] BIASES: {options['biases']}")
+        print(f"  [2] STYLE: {options['styles'][0]}")
+        print(f"  [3] CHAR_BREAK: {CHAR_BREAK}")
+        print(f"  [4] See help")
+        line(2)
+        print("Type V and Enter to validate and exit.")
+        line()
+        choice=input('>>> ')
+        
+        if choice.capitalize() == "V":
+            break
+        
+        
+        try:
+            choice = int(choice)
+            
+        except ValueError:
+            #ask again :/
+            continue
+        
+        if not 1<=choice<=4:
+            #ask again (at least it was a parsable int)
+            continue
+        
+        if choice == 1:
+            choice = choose_new("BIASES", 0.1, 1.0, False)
+            if choice == 'R':
+                options["biases"] = OPTIONS["biases"]
+                continue
+            else:
+                options["biases"] = choice
+                
+        if choice == 2:
+            choice = choose_new("STYLES", 1, 9, True)
+            if choice == 'R':
+                options["styles"] = OPTIONS["styles"]
+                continue
+            else:
+                options["styles"] = [choice]
+                
+        if choice == 3:
+            choice = choose_new("CHAR_BREAK", 10, 1000, True)
+            if choice == 'R':
+                CHAR_BREAK = CHAR_BREAK_D
+                continue
+            else:
+                CHAR_BREAK = choice
+        
+        if choice == 4:
+            clear()
+            line(2)
+            print("Here are several informations about the settings:")
+            line()
+            print("#################################")
+            for key, value in HELP.items():
+                print(f"   >> {key.capitalize()}: {value}")
+                
+            line()
+            input("Press enter to go back to the settings...")
+            continue
+        
+    return gui_1(options)
+            
+            
+            
+            
+  
+    
+def gui_1(option=OPTIONS)->tuple:
     clear()
     print(menu[1])
     line(2)
@@ -170,7 +287,7 @@ def gui_1()->tuple:
     line(2)
     if input("Press enter to confirm, or enter R to restart >>> ").capitalize() == "R":
         return gui_1()
-    return lines, OPTIONS
+    return lines, option
     
     
         
@@ -223,7 +340,7 @@ while True:
         lines, option = gui_1()
         
     else:
-        continue
+        lines, option = gui_2()
     
     
     clear()
@@ -232,6 +349,16 @@ while True:
     
     #generate the file
     generate_svg(lines, fname, option)
+    
+    
+    #Open the image with os default image viewer
+    if platform.system() == "Windows":
+        os.startfile(f"./img/{fname}.svg")
+    else:  # Linux
+        subprocess.run(["xdg-open", f"./img/{fname}.svg"])
+    
+    
+    
     
     try:
         open_svg.svg_to_drw(f"./img/{fname}.svg", fname)

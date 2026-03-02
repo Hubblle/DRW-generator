@@ -9,6 +9,8 @@ import xml.etree.ElementTree as ET
 import os
 
 
+REFLEXION = [-1,1]
+
 def parse_svg(file_path):
     tree = ET.parse(file_path)
     root = tree.getroot()
@@ -107,6 +109,9 @@ def svg_to_drw(path:str, fname:str="output", zoom=30, STARTING=(200,200)):
             coo[0]*= zoom
             coo[1]*= zoom
             
+            
+            
+            
             coo[0] -= min_x*zoom
             coo[1] -= min_y*zoom
 
@@ -114,12 +119,20 @@ def svg_to_drw(path:str, fname:str="output", zoom=30, STARTING=(200,200)):
             coo[1] = int(round(coo[1]))
             coo[0] = int(round(coo[0]))
             
+            #Mirror the image
+            copy = coo.copy()
+            
+            coo[0] = copy[1]
+            coo[1] = copy[0]
+            
             if coo[0] > max_x:
                 max_x = coo[0]
 
                     
             if coo[1] > max_y:
                 max_y = coo[1]
+                
+            
                 
 
                     
